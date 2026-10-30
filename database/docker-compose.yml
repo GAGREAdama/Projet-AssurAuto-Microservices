@@ -1,0 +1,49 @@
+# Une base DÉDIÉE par microservice métier (persistance polyglotte)
+# Utilisation avec le profil Spring "sql".
+services:
+  client-db:
+    image: mysql:8.4
+    container_name: assurauto-client-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports: ["3307:3306"]
+    volumes:
+      - client-data:/var/lib/mysql
+      - ./mysql-client/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  contrat-db:
+    image: postgres:16
+    container_name: assurauto-contrat-db
+    environment:
+      POSTGRES_USER: assurauto
+      POSTGRES_PASSWORD: assurauto
+      POSTGRES_DB: contrat_db
+    ports: ["5433:5432"]
+    volumes:
+      - contrat-data:/var/lib/postgresql/data
+
+  vehicule-db:
+    image: mariadb:11
+    container_name: assurauto-vehicule-db
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+    ports: ["3308:3306"]
+    volumes:
+      - vehicule-data:/var/lib/mysql
+      - ./mariadb-vehicule/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  sinistre-db:
+    image: mysql:8.4
+    container_name: assurauto-sinistre-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports: ["3309:3306"]
+    volumes:
+      - sinistre-data:/var/lib/mysql
+      - ./mysql-sinistre/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  client-data:
+  contrat-data:
+  vehicule-data:
+  sinistre-data:

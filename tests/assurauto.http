@@ -1,0 +1,94 @@
+### Requêtes de test (IntelliJ HTTP Client / VS Code REST Client). Tout passe par la Gateway (9999).
+@gw = http://localhost:9999
+@agent = Basic YWdlbnQ6YWdlbnQxMjM=
+@admin = Basic YWRtaW46YWRtaW4xMjM=
+
+### Config Server
+GET http://localhost:8888/client-service/default
+
+### Répartition de charge : le port change si plusieurs instances tournent
+GET {{gw}}/client-service/api/info
+
+### 1. Créer un client
+POST {{gw}}/client-service/api/clients
+Authorization: {{agent}}
+Content-Type: application/json
+
+{
+  "nom": "Kabre", "prenom": "Awa", "dateNaissance": "1990-05-01", "genre": "FEMININ",
+  "adresse": { "rue": "12 rue du Marche", "ville": "Ouagadougou", "pays": "Burkina Faso" },
+  "email": "awa@mail.com", "telephones": ["+22670000000"],
+  "numeroPieceIdentite": "CNIB123456",
+  "permisConduire": { "numero": "P-001", "categorie": "B", "dateObtention": "2012-01-15" },
+  "situationFamiliale": "MARIE", "profession": "Ingenieure"
+}
+
+### 2. Créer un contrat (clientId = id retourné ci-dessus ; adapter les dates)
+POST {{gw}}/contrat-service/api/contrats
+Authorization: {{agent}}
+Content-Type: application/json
+
+{
+  "clientId": 1, "typeContrat": "TOUS_RISQUES", "dateDebut": "2026-10-01", "dateFin": "2027-09-30",
+  "renouvellementAutomatique": true, "primeAnnuelle": 450000,
+  "garanties": [
+    { "type": "RESPONSABILITE_CIVILE", "plafond": 100000000 },
+    { "type": "DOMMAGES_COLLISION", "plafond": 8000000 },
+    { "type": "VOL", "plafond": 6000000 }
+  ],
+  "franchises": [ { "garantie": "DOMMAGES_COLLISION", "montant": 100000 } ],
+  "options": ["ASSISTANCE"]
+}
+
+### 3. Enregistrer un véhicule
+POST {{gw}}/vehicule-service/api/vehicules
+Authorization: {{agent}}
+Content-Type: application/json
+
+{
+  "contratId": 1, "immatriculation": "AB-123-CD", "marque": "Toyota", "modele": "Corolla",
+  "anneeFabrication": 2021, "vin": "JTDKB20U093123456", "datePremiereMiseEnCirculation": "2021-03-01",
+  "kilometrageDeclare": 42000, "zoneStationnement": "Ouagadougou Centre", "typeGarage": "PRIVE",
+  "usagePrincipal": "PERSONNEL", "kilometrageAnnuelEstime": 12000,
+  "systemeAlarme": true, "dispositifGeolocalisation": false, "autresEquipements": ["Anti-demarrage"]
+}
+
+### 4. Déclarer un sinistre (dateSinistre dans la période du contrat)
+POST {{gw}}/sinistre-service/api/sinistres
+Authorization: {{agent}}
+Content-Type: application/json
+
+{
+  "contratId": 1, "vehiculeId": 1, "dateSinistre": "2026-10-20", "description": "Collision au carrefour",
+  "typeIncident": "COLLISION", "lieu": "Avenue Kwame Nkrumah, Ouagadougou", "montantEstime": 1500000
+}
+
+### 5. Suivre le traitement
+POST {{gw}}/sinistre-service/api/sinistres/1/statut
+Authorization: {{agent}}
+Content-Type: application/json
+
+{ "statut": "EN_EXPERTISE", "commentaire": "Expert mandate" }
+
+### Recherches
+GET {{gw}}/sinistre-service/api/sinistres?contratId=1
+Authorization: {{agent}}
+
+###
+GET {{gw}}/sinistre-service/api/sinistres?vehiculeId=1
+Authorization: {{agent}}
+
+### Sécurité : sans authentification -> 401
+GET {{gw}}/client-service/api/clients
+
+### Sécurité : DELETE réservé à ADMIN (agent -> 403)
+DELETE {{gw}}/client-service/api/clients/1
+Authorization: {{agent}}
+
+### Actuator (ADMIN) et rafraîchissement de config
+GET http://localhost:8081/actuator/metrics
+Authorization: {{admin}}
+
+###
+POST http://localhost:8081/actuator/refresh
+Authorization: {{admin}}
